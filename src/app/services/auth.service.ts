@@ -33,24 +33,20 @@ export class AuthService {
     private auth: Auth,
     private router: Router
   ) {
-    console.log("Inicializando AuthService");
-    
     // Recuperar qualquer token salvo no storage ao iniciar
     this.tryRecoverToken();
     
     // Verificar se já temos um usuário autenticado no Firebase Auth
     if (this.auth.currentUser) {
-      console.log(`Usuário já autenticado no Firebase Auth: ${this.auth.currentUser.uid}`);
       this.currentUserSubject.next(this.auth.currentUser);
       
       // Obter token do usuário atual
       this.auth.currentUser.getIdToken().then(token => {
-        console.log('Token obtido do usuário atual');
         this.lastKnownToken = token;
         this.tokenSubject.next(token);
         sessionStorage.setItem('auth_token', token);
       }).catch(error => {
-        console.error('Erro ao obter token do usuário atual:', error);
+        console.error('Erro ao obter token');
       });
     }
     
@@ -59,25 +55,22 @@ export class AuthService {
       switchMap(user => {
         if (user) {
           this.currentUserSubject.next(user);
-          console.log(`Usuário autenticado: ${user.uid} (${user.email})`);
           return from(user.getIdToken());
         } else {
           // Verificar no sessionStorage antes de confirmar que não há usuário
           const sessionToken = sessionStorage.getItem('auth_token');
           if (sessionToken) {
-            console.log('Token encontrado no sessionStorage, mas sem usuário autenticado no Firebase');
             // Manter o token mas não atualizar o usuário
             return of(sessionToken);
           }
           
           // Realmente não há usuário autenticado
           this.currentUserSubject.next(null);
-          console.log('Nenhum usuário autenticado');
           return of(null);
         }
       }),
       catchError(error => {
-        console.error('Erro ao obter estado de autenticação:', error);
+        console.error('Erro ao obter estado de autenticação');
         return of(null);
       })
     ).subscribe(token => {
@@ -102,7 +95,6 @@ export class AuthService {
       // Verificar no sessionStorage primeiro (nossa própria persistência)
       const savedToken = sessionStorage.getItem('auth_token');
       if (savedToken) {
-        console.log('Token recuperado do sessionStorage');
         this.lastKnownToken = savedToken;
         this.tokenSubject.next(savedToken);
         return;
@@ -121,7 +113,6 @@ export class AuthService {
             const currentTime = Date.now();
             
             if (expirationTime > currentTime) {
-              console.log('Token recuperado do localStorage do Firebase');
               this.lastKnownToken = userData.stsTokenManager.accessToken;
               this.tokenSubject.next(userData.stsTokenManager.accessToken);
               
@@ -129,15 +120,15 @@ export class AuthService {
               sessionStorage.setItem('auth_token', userData.stsTokenManager.accessToken);
               return;
             } else {
-              console.warn('Token encontrado no localStorage está expirado');
+              console.warn('Token encontrado está expirado');
             }
           }
         } catch (e) {
-          console.error('Erro ao analisar dados do usuário no localStorage:', e);
+          console.error('Erro ao analisar dados do usuário');
         }
       }
     } catch (error) {
-      console.error('Erro ao tentar recuperar token:', error);
+      console.error('Erro ao tentar recuperar token');
     }
   }
 
@@ -151,10 +142,10 @@ export class AuthService {
     return from(createUserWithEmailAndPassword(this.auth, email, password))
       .pipe(
         tap(userCredential => {
-          console.log('Usuário registrado com sucesso:', userCredential.user.uid);
+          // Remover informações sensíveis dos logs
         }),
         catchError(error => {
-          console.error('Erro ao registrar usuário:', error);
+          console.error('Erro ao registrar usuário');
           throw error;
         })
       );
@@ -165,7 +156,6 @@ export class AuthService {
       .pipe(
         tap(userCredential => {
           // Remover informações sensíveis dos logs
-          console.log('Login bem-sucedido');
         }),
         catchError(error => {
           console.error('Erro ao fazer login');
@@ -175,8 +165,6 @@ export class AuthService {
   }
 
   logout(): Observable<void> {
-    console.log('Iniciando processo de logout');
-    
     // Limpar tokens armazenados antes de fazer logout
     this.lastKnownToken = null;
     this.tokenSubject.next(null);
@@ -189,22 +177,20 @@ export class AuthService {
       const storageKey = `firebase:authUser:${this.getFirebaseConfig()}:[DEFAULT]`;
       localStorage.removeItem(storageKey);
     } catch (error) {
-      console.error('Erro ao limpar localStorage:', error);
+      console.error('Erro ao limpar localStorage');
     }
     
     return from(signOut(this.auth))
       .pipe(
         tap(() => {
-          console.log('Logout bem-sucedido');
           // Limpar o usuário no subject
           this.currentUserSubject.next(null);
-          // Redirecionar para a página de login após logout
-          this.router.navigate(['/login']);
+          
+          // Redirecionar para a página de login
+          this.router.navigateByUrl('/login');
         }),
         catchError(error => {
-          console.error('Erro ao fazer logout:', error);
-          // Ainda assim, limpar o estado do usuário mesmo se o logout falhar
-          this.currentUserSubject.next(null);
+          console.error('Erro ao fazer logout');
           throw error;
         })
       );
@@ -238,7 +224,6 @@ export class AuthService {
             const currentTime = Date.now();
             
             if (expirationTime > currentTime) {
-              // Remover log que mostra informações sensíveis
               this.lastKnownToken = userData.stsTokenManager.accessToken;
               return userData.stsTokenManager.accessToken;
             } else {
@@ -269,17 +254,11 @@ export class AuthService {
     if (!user) {
       return of(undefined);
     }
-    return from(sendEmailVerification(user))
-      .pipe(
-        tap(() => console.log('Email de verificação enviado'))
-      );
+    return from(sendEmailVerification(user)).pipe();
   }
 
   resetPassword(email: string): Observable<void> {
-    return from(sendPasswordResetEmail(this.auth, email))
-      .pipe(
-        tap(() => console.log('Email de redefinição de senha enviado'))
-      );
+    return from(sendPasswordResetEmail(this.auth, email)).pipe();
   }
 
   updateUserProfile(displayName?: string | null, photoURL?: string | null): Observable<void> {
@@ -287,10 +266,7 @@ export class AuthService {
     if (!user) {
       return of(undefined);
     }
-    return from(updateProfile(user, { displayName, photoURL }))
-      .pipe(
-        tap(() => console.log('Perfil atualizado com sucesso'))
-      );
+    return from(updateProfile(user, { displayName, photoURL })).pipe();
   }
 
   updateUserPassword(newPassword: string): Observable<void> {
@@ -298,23 +274,18 @@ export class AuthService {
     if (!user) {
       return of(undefined);
     }
-    return from(updatePassword(user, newPassword))
-      .pipe(
-        tap(() => console.log('Senha atualizada com sucesso'))
-      );
+    return from(updatePassword(user, newPassword)).pipe();
   }
 
   get isLoggedIn(): Observable<boolean> {
     // Verificar primeiro se o usuário já está autenticado na sessão
     if (this.auth.currentUser) {
-      console.log('Usuário autenticado');
       return of(true);
     }
     
     // Verificar se temos um token válido no sessionStorage
     const sessionToken = sessionStorage.getItem('auth_token');
     if (sessionToken) {
-      console.log('Token de sessão válido');
       return of(true);
     }
     
@@ -331,7 +302,6 @@ export class AuthService {
             const currentTime = Date.now();
             
             if (expirationTime > currentTime) {
-              console.log('Sessão Firebase válida');
               // Salvar também no sessionStorage para futuros acessos
               sessionStorage.setItem('auth_token', userData.stsTokenManager.accessToken);
               return of(true);
@@ -347,10 +317,7 @@ export class AuthService {
     
     // Por último, verificar com o observable do Firebase Auth
     return this.currentUser$.pipe(
-      map(user => !!user),
-      tap(isLoggedIn => {
-        console.log('Estado de autenticação do Firebase Auth:', isLoggedIn ? 'autenticado' : 'não autenticado');
-      })
+      map(user => !!user)
     );
   }
 

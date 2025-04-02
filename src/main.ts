@@ -29,8 +29,6 @@ const firebaseConfig = (window as any).ENV?.firebase || environment.firebase;
   logLevel: 'silent',
 };
 
-console.log("Inicializando Firebase com config:", firebaseConfig);
-
 // Inicializar o Firebase
 const firebaseApp = initializeApp(firebaseConfig);
 // Inicializar o Analytics apenas em produção ou se necessário
