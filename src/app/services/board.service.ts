@@ -15,68 +15,51 @@ export class BoardService implements OnDestroy {
   // Manter o board mockado para desenvolvimento local
   private mockBoard: Board = {
     id: "mock_local_board",
-    title: "Meu Kanban",
+    title: "Meu Primeiro Kanban",
     columns: [
       {
         id: "col1",
-        title: "A Fazer",
+        title: "Bem-vindo! 👋",
         color: "#2D8CFF",
         cards: [
           {
             id: "card1",
-            title: "Implementar drag and drop",
-            description: "Adicionar funcionalidade de arrastar e soltar para os cards entre colunas",
+            title: "Como usar este Kanban",
+            description: "Este é um quadro Kanban para gerenciar suas tarefas. Você pode:\n\n1. Criar novas colunas\n2. Adicionar cartões em cada coluna\n3. Arrastar cartões entre colunas\n4. Editar cartões e colunas\n5. Definir cores para as colunas\n6. Adicionar tags aos cartões\n7. Definir datas de vencimento",
             tags: [
-              { id: "tag1", name: "Feature", color: "#00C781" },
-              { id: "tag2", name: "UI/UX", color: "#7D4CDB" },
+              { id: "tag1", name: "Tutorial", color: "#00C781" }
             ],
-            dueDate: new Date("2023-12-15"),
             order: 0,
           },
           {
             id: "card2",
-            title: "Criar componente de modal",
-            description: "Desenvolver um componente reutilizável para modais",
-            tags: [{ id: "tag1", name: "Feature", color: "#00C781" }],
+            title: "Dicas de uso",
+            description: "• Clique no '+' para adicionar novos cartões\n• Arraste os cartões entre colunas para atualizar seu status\n• Use tags para categorizar suas tarefas\n• Defina datas de vencimento para acompanhar prazos\n• Personalize as cores das colunas para melhor organização",
+            tags: [{ id: "tag2", name: "Dicas", color: "#7D4CDB" }],
             order: 1,
-          },
+          }
         ],
       },
       {
         id: "col2",
-        title: "Em Progresso",
+        title: "A Fazer",
         color: "#FFAA15",
         cards: [
           {
             id: "card3",
-            title: "Estilizar componentes com SCSS",
-            description: "Aplicar estilos usando SCSS para todos os componentes do board",
-            tags: [{ id: "tag2", name: "UI/UX", color: "#7D4CDB" }],
+            title: "Criar minha primeira tarefa",
+            description: "Clique no botão '+' abaixo do título da coluna para adicionar um novo cartão com sua primeira tarefa.",
+            tags: [{ id: "tag3", name: "Início", color: "#2D8CFF" }],
             order: 0,
-          },
+          }
         ],
       },
       {
         id: "col3",
-        title: "Concluído",
+        title: "Concluído ✨",
         color: "#00C781",
-        cards: [
-          {
-            id: "card4",
-            title: "Configurar projeto Angular",
-            description: "Inicializar o projeto e configurar as dependências necessárias",
-            tags: [{ id: "tag3", name: "Setup", color: "#2D8CFF" }],
-            order: 0,
-          },
-          {
-            id: "card5",
-            title: "Criar estrutura de componentes",
-            description: "Definir a arquitetura e criar os componentes base",
-            tags: [{ id: "tag3", name: "Setup", color: "#2D8CFF" }],
-            order: 1,
-          },
-        ],
-      },
+        cards: [],
+      }
     ],
   }
 
@@ -297,25 +280,56 @@ export class BoardService implements OnDestroy {
 
   // Método para inicializar o board com colunas mockadas
   private initializeBoardWithMockColumns(boardId: string): void {
-    // Criando as colunas uma por uma do mockBoard
+    console.log('Inicializando board com colunas padrão...');
+    
+    // Criar as colunas sequencialmente com um pequeno delay entre cada uma
     this.mockBoard.columns.forEach((column, index) => {
       setTimeout(() => {
+        console.log(`Criando coluna ${index + 1}/${this.mockBoard.columns.length}: ${column.title}`);
+        
         const columnInput: Omit<Column, 'id' | 'cards'> = {
           title: column.title,
           color: column.color,
           cardLimit: column.cardLimit || 0
         };
         
-        // Adicionando coluna
-        this.addColumn(columnInput);
-        
-        // Se for a última coluna, após ela ser adicionada, vamos adicionar os cards
-        if (index === this.mockBoard.columns.length - 1) {
-          setTimeout(() => {
-            this.initializeBoardWithMockCards();
-          }, 1000);
-        }
-      }, index * 500); // Espaçamento de tempo entre cada adição de coluna
+        // Adicionar coluna e seus cards
+        this.boardGraphqlService.addColumn(boardId, columnInput).pipe(
+          tap(updatedBoard => {
+            // Encontrar a coluna recém-criada
+            const newColumn = updatedBoard.columns.find(c => c.title === column.title);
+            if (newColumn && column.cards && column.cards.length > 0) {
+              console.log(`Adicionando ${column.cards.length} cards à coluna ${column.title}`);
+              
+              // Adicionar cards da coluna com delay entre cada um
+              column.cards.forEach((card, cardIndex) => {
+                setTimeout(() => {
+                  const cardInput: Omit<Card, 'id'> = {
+                    title: card.title,
+                    description: card.description,
+                    order: card.order,
+                    tags: card.tags,
+                    dueDate: card.dueDate
+                  };
+                  
+                  this.boardGraphqlService.addCard(boardId, newColumn.id, cardInput).subscribe(
+                    () => console.log(`Card ${cardIndex + 1} adicionado à coluna ${column.title}`),
+                    error => console.error(`Erro ao adicionar card ${cardIndex + 1}:`, error)
+                  );
+                }, cardIndex * 500); // 500ms entre cada card
+              });
+            }
+          })
+        ).subscribe(
+          () => {
+            console.log(`Coluna ${column.title} criada com sucesso`);
+            if (index === this.mockBoard.columns.length - 1) {
+              this.toastService.show('Seu quadro está pronto para uso! 🎉', 'success');
+            }
+          },
+          error => console.error(`Erro ao criar coluna ${column.title}:`, error)
+        );
+      }, index * 1000); // 1 segundo entre cada coluna
     });
   }
   
@@ -1214,7 +1228,21 @@ export class BoardService implements OnDestroy {
   }
 
   createBoard(title: string): void {
+    console.log('Criando novo board com título:', title);
+    
     this.boardGraphqlService.createBoard(title).pipe(
+      tap(newBoard => {
+        console.log('Board criado com sucesso, iniciando configuração inicial...');
+        
+        // Após criar o board, adicionar as colunas iniciais
+        if (newBoard && newBoard.id) {
+          this.updateBoardState(newBoard);
+          
+          // Iniciar processo de criação das colunas do mockBoard
+          console.log('Iniciando criação das colunas padrão...');
+          this.initializeBoardWithMockColumns(newBoard.id);
+        }
+      }),
       catchError(error => {
         console.error('Erro ao criar board via API:', error);
         
@@ -1228,7 +1256,7 @@ export class BoardService implements OnDestroy {
       })
     ).subscribe(newBoard => {
       this.updateBoardState(newBoard);
-      this.toastService.show('Quadro criado com sucesso', 'success');
+      this.toastService.show('Quadro criado com sucesso! Aguarde enquanto configuramos seu ambiente...', 'success');
     });
   }
 
