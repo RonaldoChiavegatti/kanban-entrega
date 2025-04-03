@@ -10,7 +10,6 @@ import { ToastService } from "../../services/toast.service"
 import { AuthService } from "../../services/auth.service"
 import { Subscription, combineLatest } from "rxjs"
 import { User } from "@angular/fire/auth"
-import { Router } from "@angular/router"
 
 @Component({
   selector: "app-board",
@@ -39,28 +38,17 @@ export class BoardComponent implements OnInit, OnDestroy {
     private boardService: BoardService,
     private toastService: ToastService,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef,
-    private router: Router
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    console.log('BoardComponent: Inicializando');
-    this.isLoading = true;
-    
     // Monitorar mudanças de usuário
     this.authSubscription = this.authService.currentUser$.subscribe(user => {
       // Se o usuário mudou, recarregar o board
       if (this.currentUser?.uid !== user?.uid) {
-        console.log('BoardComponent: Usuário mudou, recarregando quadro...');
-        console.log('BoardComponent: Usuário anterior:', this.currentUser?.uid || 'nenhum');
-        console.log('BoardComponent: Novo usuário:', user?.uid || 'nenhum');
-        
+        console.log('Usuário mudou, recarregando quadro...');
         this.currentUser = user;
         this.isLoading = true;
-        this.loadBoard();
-      } else if (!this.board.id || this.board.id === '') {
-        // Se o usuário não mudou, mas o board ainda não foi carregado
-        console.log('BoardComponent: Board não carregado. Iniciando carregamento...');
         this.loadBoard();
       }
     });
@@ -91,13 +79,6 @@ export class BoardComponent implements OnInit, OnDestroy {
     const token = this.authService.getToken();
     const userEmail = this.authService.userEmail;
     console.log(`BoardComponent: Estado da autenticação: Token=${token ? 'Presente' : 'Ausente'}, Email=${userEmail || 'N/A'}`);
-    
-    if (!token) {
-      console.error('BoardComponent: Tentativa de carregar quadro sem autenticação');
-      this.toastService.show('Você precisa estar autenticado para acessar seu quadro', 'error');
-      this.router.navigate(['/login']);
-      return;
-    }
     
     // Forçar o carregamento do board do backend
     console.log('BoardComponent: Forçando recarga de dados do servidor');
