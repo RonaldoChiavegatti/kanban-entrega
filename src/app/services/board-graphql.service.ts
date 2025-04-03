@@ -76,11 +76,18 @@ const GET_BOARD = gql`
   }
 `;
 
+interface BoardInput {
+  title: string;
+  userId: string;
+}
+
 const CREATE_BOARD = gql`
   mutation CreateBoard($input: BoardInput!) {
     createBoard(input: $input) {
       id
       title
+      userId
+      createdAt
       columns {
         id
         title
@@ -388,7 +395,12 @@ export class BoardGraphqlService {
     return this.apollo.watchQuery<{ boards: Board[] }>({
       query: GET_BOARDS,
       fetchPolicy: 'network-only', // Importante: Forçar busca no servidor ignorando cache
-      errorPolicy: 'all'
+      errorPolicy: 'all',
+      context: {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
+      }
     })
     .valueChanges
     .pipe(
@@ -516,43 +528,56 @@ export class BoardGraphqlService {
   }
 
   createBoard(title: string): Observable<Board> {
+    const token = this.authService.getToken();
+    const userId = this.authService.currentUser?.uid || this.authService.currentUser?.email || 'anonymous';
+    
+    console.log('GraphQL: Criando board com userId:', userId);
+    
     return this.apollo.mutate<{ createBoard: Board }>({
       mutation: CREATE_BOARD,
       variables: {
-        input: { title }
+        input: {
+          title,
+          userId
+        }
       },
-      errorPolicy: 'all'
+      context: {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
+      }
     })
     .pipe(
       map(result => {
-        if (result.errors) {
-          console.error('Erro ao criar board:', result.errors);
-          throw new Error(`Erro ao criar board: ${result.errors[0].message}`);
+        if (!result.data?.createBoard) {
+          throw new Error('Board não foi criado');
         }
-        console.log('Board criado:', result.data?.createBoard);
-        return result.data!.createBoard;
+        return result.data.createBoard;
       }),
       catchError(this.handleError('createBoard'))
     );
   }
 
-  updateBoard(id: string, input: { title: string }): Observable<Board> {
+  updateBoard(id: string, input: BoardInput): Observable<Board> {
+    const token = this.authService.getToken();
     return this.apollo.mutate<{ updateBoard: Board }>({
       mutation: UPDATE_BOARD,
       variables: {
         id,
         input
       },
-      errorPolicy: 'all'
+      context: {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
+      }
     })
     .pipe(
       map(result => {
-        if (result.errors) {
-          console.error(`Erro ao atualizar board ${id}:`, result.errors);
-          throw new Error(`Erro ao atualizar board: ${result.errors[0].message}`);
+        if (!result.data?.updateBoard) {
+          throw new Error('Board não foi atualizado');
         }
-        console.log('Board atualizado:', result.data?.updateBoard);
-        return result.data!.updateBoard;
+        return result.data.updateBoard;
       }),
       catchError(this.handleError('updateBoard'))
     );
