@@ -4,7 +4,7 @@ import { provideHttpClient, withInterceptors } from "@angular/common/http"
 import { AppComponent } from "./app/app.component"
 import { Apollo } from 'apollo-angular'
 import { environment } from "./environments/environment"
-import { provideRouter } from "@angular/router"
+import { provideRouter, withHashLocation } from "@angular/router"
 import { routes } from "./app/app.routes"
 import { initializeApp } from 'firebase/app'
 import { getAnalytics } from 'firebase/analytics'
@@ -40,12 +40,14 @@ bootstrapApplication(AppComponent, {
   providers: [
     provideAnimations(),
     provideHttpClient(withInterceptors([authInterceptor])),
-    provideRouter(routes),
+    provideRouter(routes, withHashLocation()),
     // Firebase
-    provideFirebaseApp(() => firebaseApp),
-    provideAuth(() => getAuth(firebaseApp)),
-    provideFirestore(() => getFirestore(firebaseApp)),
-    provideStorage(() => getStorage(firebaseApp)),
+    importProvidersFrom(
+      provideFirebaseApp(() => firebaseApp),
+      provideAuth(() => getAuth()),
+      provideFirestore(() => getFirestore()),
+      provideStorage(() => getStorage())
+    ),
     // GraphQL
     importProvidersFrom(GraphQLModule),
     // Para permitir a injeção do Apollo
