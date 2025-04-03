@@ -3,20 +3,6 @@
 <head>
   <meta charset="utf-8">
   <title>Angular Kanban Board</title>
-  <script>
-    // Redirecionar para a página inicial com o hash
-    const location = window.location;
-    const pathname = location.pathname;
-    
-    // Verificar se já está no formato hash
-    if (!location.hash) {
-      const redirect = location.protocol + '//' + location.hostname + 
-                      (location.port ? ':' + location.port : '') +
-                      '/#/' + pathname.slice(1) +
-                      (location.search ? location.search : '');
-      window.location.replace(redirect);
-    }
-  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <style>
