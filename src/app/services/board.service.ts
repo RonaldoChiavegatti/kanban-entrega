@@ -1472,7 +1472,7 @@ export class BoardService implements OnDestroy {
       },
       error: (error) => {
         console.error('Erro ao atualizar título do board:', error);
-        this.toastService.show('Erro ao atualizar título do board', { classname: 'bg-danger text-light' });
+        this.toastService.show('Erro ao atualizar título do board', 'error');
       }
     });
   }
