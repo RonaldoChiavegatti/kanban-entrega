@@ -328,4 +328,45 @@ export class AuthService {
   get userEmail(): string | null {
     return this.currentUser?.email || null;
   }
+
+  // Método para obter o usuário atual de forma síncrona
+  getCurrentUser(): User | null {
+    // Primeiro verificar no objeto de serviço
+    if (this.auth.currentUser) {
+      return this.auth.currentUser;
+    }
+    
+    // Se não encontrar no serviço, verificar no nosso subject
+    const currentUser = this.currentUserSubject.getValue();
+    if (currentUser) {
+      return currentUser;
+    }
+    
+    // Tentar recuperar do localStorage como último recurso
+    try {
+      const storageKey = `firebase:authUser:${this.getFirebaseConfig()}:[DEFAULT]`;
+      const userDataStr = localStorage.getItem(storageKey);
+      
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        // Não podemos retornar um objeto User completo aqui, mas podemos criar um objeto simples
+        // que contenha as propriedades básicas que precisamos
+        if (userData && userData.uid) {
+          return {
+            uid: userData.uid,
+            email: userData.email,
+            displayName: userData.displayName,
+            emailVerified: userData.emailVerified,
+            isAnonymous: userData.isAnonymous,
+            // Simular outros métodos/propriedades necessários
+            getIdToken: () => Promise.resolve(this.lastKnownToken || '')
+          } as unknown as User;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao tentar recuperar usuário do localStorage:', error);
+    }
+    
+    return null;
+  }
 } 

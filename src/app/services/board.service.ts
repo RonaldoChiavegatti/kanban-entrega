@@ -173,25 +173,11 @@ export class BoardService implements OnDestroy {
   private fetchBoardsFromAPI(): void {
     console.log(`Buscando boards da API para usuário: ${this.currentUserId}`);
     
-    // Verificar se temos um token de autenticação antes de fazer a chamada
-    const authToken = this.authService.getToken();
-    if (!authToken) {
-      console.warn('Não há token de autenticação disponível. Tentando carregar os boards mesmo assim...');
-    } else {
-      console.log('Token de autenticação disponível para a chamada à API');
-    }
+    // Verificar o status da autenticação
+    const token = this.authService.getToken();
+    console.log('Token disponível:', token ? 'Sim' : 'Não');
     
     this.boardGraphqlService.getBoards().pipe(
-      tap(boards => {
-        if (Array.isArray(boards)) {
-          console.log(`Obteve ${boards.length} boards da API`);
-          boards.forEach((board, index) => {
-            console.log(`Board ${index + 1}: ID=${board.id}, Título=${board.title}, UserId=${board.userId || 'não definido'}, Colunas=${board.columns?.length || 0}`);
-          });
-        } else {
-          console.warn('Resposta da API não é um array:', boards);
-        }
-      }),
       catchError(error => {
         console.error('Erro ao carregar boards:', error);
         
@@ -202,15 +188,23 @@ export class BoardService implements OnDestroy {
           console.warn('Erro de autenticação. Verifique se o usuário está logado corretamente.');
           this.toastService.show('Sua sessão expirou. Por favor, faça login novamente.', 'error');
         } else {
-          this.toastService.show('Não foi possível carregar seus dados. Criando um novo quadro.', 'warning');
+          console.warn('Erro ao carregar boards. Tentando criar um novo quadro...');
+          this.toastService.show('Criando novo quadro para você...', 'info');
         }
         
-        // Caso de erro, criamos um novo board a partir do modelo
+        // Em caso de erro na obtenção dos boards, criar um novo automaticamente
         return this.boardGraphqlService.createBoard(this.mockBoard.title).pipe(
+          tap(newBoard => {
+            console.log('Novo board criado após erro na obtenção:', newBoard);
+          }),
           catchError(createError => {
-            console.error('Erro ao criar board:', createError);
-            this.toastService.show('Erro ao criar quadro. Algumas funcionalidades podem estar limitadas.', 'error');
-            return of(this.deepClone(this.mockBoard));
+            console.error('Erro ao criar board após falha inicial:', createError);
+            this.toastService.show('Erro ao criar quadro. Usando versão local temporária.', 'error');
+            
+            // Retornar uma cópia do mockBoard como último recurso
+            const localBoard = this.deepClone(this.mockBoard);
+            localBoard.id = `local_${Date.now()}`;
+            return of(localBoard);
           })
         );
       }),
@@ -239,8 +233,10 @@ export class BoardService implements OnDestroy {
             }),
             catchError(error => {
               console.error('Erro ao criar board:', error);
-              this.toastService.show('Erro ao criar quadro. Algumas funcionalidades podem estar limitadas.', 'error');
-              return of(this.deepClone(this.mockBoard));
+              this.toastService.show('Erro ao criar quadro. Usando versão local temporária.', 'error');
+              const localBoard = this.deepClone(this.mockBoard);
+              localBoard.id = `local_${Date.now()}`;
+              return of(localBoard);
             })
           );
         }
@@ -252,7 +248,9 @@ export class BoardService implements OnDestroy {
         if (!board || !board.columns) {
           console.error('Board recebido da API é inválido:', board);
           this.toastService.show('Erro ao carregar o quadro. Usando versão local.', 'warning');
-          this.updateBoardState(this.deepClone(this.mockBoard));
+          const localMockBoard = this.deepClone(this.mockBoard);
+          localMockBoard.id = `local_${Date.now()}`;
+          this.updateBoardState(localMockBoard);
           return;
         }
         
@@ -287,18 +285,44 @@ export class BoardService implements OnDestroy {
         }
       },
       error: (error) => {
-        console.error('Erro ao processar board:', error);
-        this.toastService.show('Erro ao carregar seus dados. Usando versão local.', 'error');
-        // Em caso de erro, usar o board mockado
-        this.updateBoardState(this.deepClone(this.mockBoard));
+        console.error('Erro crítico ao processar board:', error);
+        this.toastService.show('Erro ao processar o quadro. Tente recarregar a página.', 'error');
+        
+        // Fallback para um quadro local em caso de erro
+        const localMockBoard = this.deepClone(this.mockBoard);
+        localMockBoard.id = `local_${Date.now()}`;
+        this.updateBoardState(localMockBoard);
       }
     });
   }
 
   // Método para inicializar o board com colunas mockadas
   private initializeBoardWithMockColumns(boardId: string): void {
+    console.log(`Inicializando board ${boardId} com colunas padrão...`);
+    
+    // Verifica se o ID do board é válido
+    if (!boardId || boardId.trim() === '') {
+      console.error('ID do board inválido para inicialização de colunas');
+      this.toastService.show('Erro ao criar colunas iniciais. Tente recarregar a página.', 'error');
+      return;
+    }
+    
+    // Limpar quaisquer colunas existentes (garantir estado limpo)
+    const currentBoard = this.getBoard();
+    if (currentBoard.columns.length > 0) {
+      console.log('Limpando colunas existentes antes da inicialização...');
+      this.toastService.show('Preparando seu quadro...', 'info');
+    }
+
     // Criando as colunas uma por uma do mockBoard
-    this.mockBoard.columns.forEach((column, index) => {
+    const defaultColumns = this.mockBoard.columns;
+    console.log(`Criando ${defaultColumns.length} colunas padrão...`);
+    
+    // Monitorar o progresso de criação
+    let columnsCreated = 0;
+    
+    // Criar cada coluna com um pequeno intervalo para evitar race conditions
+    defaultColumns.forEach((column, index) => {
       setTimeout(() => {
         const columnInput: Omit<Column, 'id' | 'cards'> = {
           title: column.title,
@@ -307,52 +331,122 @@ export class BoardService implements OnDestroy {
         };
         
         // Adicionando coluna
+        console.log(`Criando coluna "${columnInput.title}" (${index + 1}/${defaultColumns.length})`);
         this.addColumn(columnInput);
         
+        columnsCreated++;
+        
         // Se for a última coluna, após ela ser adicionada, vamos adicionar os cards
-        if (index === this.mockBoard.columns.length - 1) {
+        if (columnsCreated === defaultColumns.length) {
+          console.log('Todas as colunas foram criadas. Iniciando adição de cards...');
+          // Esperar um pouco mais para garantir que todas as colunas foram salvas
           setTimeout(() => {
-            this.initializeBoardWithMockCards();
-          }, 1000);
+            // Verificar se as colunas foram realmente criadas
+            const updatedBoard = this.getBoard();
+            if (updatedBoard.columns.length === defaultColumns.length) {
+              this.initializeBoardWithMockCards();
+            } else {
+              console.warn(`Esperava ${defaultColumns.length} colunas, mas temos ${updatedBoard.columns.length}`);
+              this.toastService.show('Algumas colunas podem não ter sido criadas corretamente.', 'warning');
+              // Tentar inicializar com os cards de qualquer forma
+              this.initializeBoardWithMockCards();
+            }
+          }, 1500);
         }
-      }, index * 500); // Espaçamento de tempo entre cada adição de coluna
+      }, index * 700); // Espaçamento maior entre cada coluna para evitar problemas
     });
   }
   
   // Método para inicializar as colunas com cards mockados
   private initializeBoardWithMockCards(): void {
-    const board = this.getBoard();
-    if (!board || !board.columns || board.columns.length === 0) return;
+    console.log('Inicializando board com cards de exemplo...');
     
-    // Para cada coluna do mockBoard
-    this.mockBoard.columns.forEach((mockColumn, colIndex) => {
-      // Encontramos a coluna correspondente no board atual
-      const targetColumn = board.columns[colIndex];
-      if (!targetColumn) return;
+    const board = this.getBoard();
+    if (!board || !board.id || board.id.trim() === '') {
+      console.error('Board inválido para inicialização de cards');
+      return;
+    }
+    
+    if (!board.columns || board.columns.length === 0) {
+      console.error('Nenhuma coluna disponível para adicionar cards');
+      this.toastService.show('Erro ao adicionar cards. Tente adicionar manualmente.', 'warning');
+      return;
+    }
+    
+    // Número de colunas em cada board pode ser diferente
+    const mockColumns = this.mockBoard.columns;
+    const actualColumns = board.columns;
+    
+    console.log(`Adicionando cards a ${actualColumns.length} colunas...`);
+    
+    // Para cada coluna do mockBoard (limitado ao número de colunas que temos)
+    const columnsToPopulate = Math.min(mockColumns.length, actualColumns.length);
+    
+    // Controlar o número total de cards para mostrar mensagem
+    let totalCards = 0;
+    let addedCards = 0;
+    
+    // Contar total de cards a adicionar
+    for (let i = 0; i < columnsToPopulate; i++) {
+      if (mockColumns[i].cards) {
+        totalCards += mockColumns[i].cards.length;
+      }
+    }
+    
+    // Mostrar mensagem se tivermos muitos cards para adicionar
+    if (totalCards > 5) {
+      this.toastService.show(`Adicionando ${totalCards} cards de exemplo...`, 'info');
+    }
+    
+    // Inicializar cada coluna com seus cards
+    for (let colIndex = 0; colIndex < columnsToPopulate; colIndex++) {
+      const mockColumn = mockColumns[colIndex];
+      const targetColumn = actualColumns[colIndex];
+      
+      // Se não temos cards para adicionar, pular
+      if (!mockColumn.cards || mockColumn.cards.length === 0) {
+        continue;
+      }
+      
+      console.log(`Adicionando ${mockColumn.cards.length} cards à coluna "${targetColumn.title}"`);
       
       // Para cada card da coluna mockada
       mockColumn.cards.forEach((mockCard, cardIndex) => {
         setTimeout(() => {
-          // Garantir que a data esteja no formato correto
-          let formattedDueDate;
-          if (mockCard.dueDate) {
-            formattedDueDate = this.formatDateForGraphQL(mockCard.dueDate);
+          try {
+            // Garantir que a data esteja no formato correto
+            let formattedDueDate;
+            if (mockCard.dueDate) {
+              formattedDueDate = this.formatDateForGraphQL(mockCard.dueDate);
+            }
+            
+            const cardInput: Omit<Card, 'id'> = {
+              title: mockCard.title,
+              description: mockCard.description,
+              tags: mockCard.tags,
+              dueDate: formattedDueDate,
+              order: cardIndex,
+              attachments: mockCard.attachments
+            };
+            
+            // Adicionando card
+            console.log(`Adicionando card "${cardInput.title}" à coluna "${targetColumn.title}"`);
+            this.addCard(targetColumn.id, cardInput);
+            
+            addedCards++;
+            
+            // Se for o último card, mostrar mensagem de conclusão
+            if (addedCards === totalCards) {
+              setTimeout(() => {
+                this.toastService.show('Seu quadro está pronto para uso!', 'success');
+              }, 1000);
+            }
+          } catch (error) {
+            console.error(`Erro ao adicionar card ${cardIndex} à coluna ${targetColumn.id}:`, error);
           }
-          
-          const cardInput: Omit<Card, 'id'> = {
-            title: mockCard.title,
-            description: mockCard.description,
-            tags: mockCard.tags,
-            dueDate: formattedDueDate,
-            order: cardIndex,
-            attachments: mockCard.attachments
-          };
-          
-          // Adicionando card
-          this.addCard(targetColumn.id, cardInput);
-        }, cardIndex * 300); // Espaçamento de tempo entre cada adição de card
+        }, cardIndex * 500 + colIndex * 1000); // Maior espaçamento entre cards e colunas
       });
-    });
+    }
   }
 
   private createMockBoard(): Board {
@@ -399,24 +493,68 @@ export class BoardService implements OnDestroy {
   }
 
   addColumn(column: Omit<Column, 'id' | 'cards'>): void {
-    const board = this.getBoard();
+    console.log('Adicionando nova coluna:', column.title);
     
-    if (!board || !board.id) {
-      console.error('Não é possível adicionar coluna: board inválido');
-      this.toastService.show('Erro ao adicionar coluna: board inválido.', 'error');
+    // Verificar se temos um board válido
+    const currentBoard = this.getBoard();
+    if (!currentBoard.id || currentBoard.id.trim() === '') {
+      console.error('Não é possível adicionar coluna: ID do board inválido');
+      this.toastService.show('Erro ao adicionar coluna. Tente recarregar a página.', 'error');
       return;
     }
     
-    this.boardGraphqlService.addColumn(board.id, column).pipe(
+    // Criar um ID temporário para a coluna
+    const tempId = `temp_${Date.now()}`;
+    const newColumn: Column = {
+      id: tempId,
+      title: column.title || 'Nova Coluna',
+      color: column.color || '#4a6ae5',
+      cardLimit: column.cardLimit || 0,
+      cards: []
+    };
+    
+    // Adicionar coluna temporária imediatamente para feedback visual
+    const updatedBoard = this.deepClone(currentBoard);
+    updatedBoard.columns.push(newColumn);
+    this.updateBoardState(updatedBoard);
+    
+    // Verificar se estamos online para salvar no backend
+    this.boardGraphqlService.addColumn(currentBoard.id, {
+      title: column.title || 'Nova Coluna',
+      color: column.color || '#4a6ae5',
+      cardLimit: column.cardLimit || 0
+    }).pipe(
       catchError(error => {
-        console.error('Erro ao adicionar coluna:', error);
-        this.toastService.show('Erro ao adicionar coluna. Tente novamente.', 'error');
-        return of(null);
+        console.error('Erro ao adicionar coluna via API:', error);
+        this.toastService.show('Erro ao salvar coluna. Tentando novamente...', 'warning');
+        
+        // Tentar mais uma vez após um breve intervalo
+        return new Observable(observer => {
+          setTimeout(() => {
+            this.boardGraphqlService.addColumn(currentBoard.id, {
+              title: column.title || 'Nova Coluna',
+              color: column.color || '#4a6ae5',
+              cardLimit: column.cardLimit || 0
+            }).subscribe({
+              next: (board) => observer.next(board),
+              error: (retryError) => {
+                console.error('Erro na segunda tentativa de adicionar coluna:', retryError);
+                this.toastService.show('Erro ao salvar coluna. As alterações podem não persistir.', 'error');
+                observer.error(retryError);
+              },
+              complete: () => observer.complete()
+            });
+          }, 1000);
+        });
       })
-    ).subscribe(updatedBoard => {
-      if (updatedBoard) {
-        this.updateBoardState(updatedBoard);
-        // Removido toast de sucesso para evitar spam
+    ).subscribe({
+      next: (updatedBoardFromApi) => {
+        console.log('Coluna adicionada com sucesso via API');
+        this.updateBoardState(updatedBoardFromApi);
+      },
+      error: (error) => {
+        console.error('Erro fatal ao adicionar coluna:', error);
+        // A coluna temporária já foi adicionada na UI, então o usuário ainda pode interagir com ela
       }
     });
   }
@@ -1328,8 +1466,48 @@ export class BoardService implements OnDestroy {
 
   // Método público para forçar o carregamento do board
   public loadBoardData(): void {
-    console.log('Forçando o carregamento do board...');
-    this.loadBoardsFromApi();
+    console.log('BoardService: Solicitação de carregamento de dados recebida');
+    
+    // Verificar autenticação
+    const token = this.authService.getToken();
+    const user = this.authService.getCurrentUser();
+    
+    if (!token) {
+      console.warn('BoardService: Tentativa de carregar dados sem token de autenticação');
+      this.toastService.show('Você precisa estar autenticado para acessar seus quadros.', 'warning');
+      return;
+    }
+    
+    // Verificar se o usuário está definido
+    if (user) {
+      const userId = user.uid || user.email || 'anonymous';
+      console.log(`BoardService: Usuário autenticado (${userId}). Carregando dados...`);
+      
+      // Se o ID do usuário atual for diferente do que já estamos usando,
+      // atualizar para forçar recarregamento dos dados
+      if (this.currentUserId !== userId) {
+        console.log(`BoardService: Mudança de usuário detectada (${this.currentUserId} -> ${userId})`);
+        this.previousUserId = this.currentUserId;
+        this.currentUserId = userId;
+      }
+      
+      // Mostrar mensagem de carregamento
+      this.toastService.show('Carregando seus dados...', 'info');
+      
+      // Resetar o board para mostrar estado de carregamento
+      const loadingBoard: Board = {
+        id: "",
+        title: "Carregando dados...",
+        columns: []
+      };
+      this.boardSubject.next(loadingBoard);
+      
+      // Chamar o método que carrega os dados
+      this.fetchBoardsFromAPI();
+    } else {
+      console.error('BoardService: Usuário não encontrado apesar de ter token');
+      this.toastService.show('Erro ao identificar usuário. Tente fazer login novamente.', 'error');
+    }
   }
 
   updateCardOrder(columnId: string, cardId: string, newOrder: number): void {
