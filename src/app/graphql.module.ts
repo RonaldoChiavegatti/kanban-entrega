@@ -7,7 +7,6 @@ import { environment } from '../environments/environment';
 import { setContext } from '@apollo/client/link/context';
 import { AuthService } from './services/auth.service';
 import { inject } from '@angular/core';
-import { ServerError } from '@apollo/client/link/utils';
 
 export function createApollo(httpLink: HttpLink, authService: AuthService) {
   console.log('Inicializando Apollo GraphQL...');
@@ -32,10 +31,7 @@ export function createApollo(httpLink: HttpLink, authService: AuthService) {
       });
     }
     if (networkError) {
-      console.error(`[Network error]:`, networkError);
-      if ((networkError as ServerError).statusCode) {
-        console.error(`Status code: ${(networkError as ServerError).statusCode}`);
-      }
+      console.error(`[Network error]`);
     }
   });
 
@@ -129,7 +125,6 @@ export function createApollo(httpLink: HttpLink, authService: AuthService) {
         errorPolicy: 'all',
       },
       mutate: {
-        fetchPolicy: 'no-cache',
         errorPolicy: 'all',
       },
       watchQuery: {
@@ -142,7 +137,6 @@ export function createApollo(httpLink: HttpLink, authService: AuthService) {
 
 @NgModule({
   providers: [
-    Apollo,
     {
       provide: APOLLO_OPTIONS,
       useFactory: createApollo,

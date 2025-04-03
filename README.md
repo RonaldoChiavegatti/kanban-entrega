@@ -1,88 +1,59 @@
-# Kanban Board - Gerenciador de Tarefas
+# KanbanBoard
 
-Uma aplicação web moderna para gerenciamento de tarefas usando o método Kanban, desenvolvida com Angular.
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.4.
 
-## 🚀 Como Começar
+## Development server
 
-1. Acesse a aplicação em: [https://seu-usuario.github.io/kanban-board](https://seu-usuario.github.io/kanban-board)
-2. Faça login usando sua conta Google
-3. Um quadro inicial será criado automaticamente com instruções de uso
+To start a local development server, run:
 
-## 📋 Funcionalidades
+```bash
+ng serve
+```
 
-- **Quadros Kanban**
-  - Crie múltiplos quadros para diferentes projetos
-  - Personalize o título de cada quadro
-  - Interface intuitiva e responsiva
+Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
 
-- **Colunas**
-  - Adicione colunas para representar diferentes estágios
-  - Personalize cores das colunas
-  - Defina limites de cartões por coluna
-  - Reorganize colunas arrastando-as
+## Code scaffolding
 
-- **Cartões**
-  - Crie cartões com título e descrição
-  - Adicione tags coloridas para categorização
-  - Defina datas de vencimento
-  - Arraste cartões entre colunas
-  - Edite ou exclua cartões facilmente
+Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
 
-## 💡 Dicas de Uso
+```bash
+ng generate component component-name
+```
 
-1. **Organização**
-   - Use colunas para representar estágios do seu fluxo de trabalho
-   - Mantenha os cartões ordenados por prioridade
-   - Use tags para categorizar tarefas
+For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
 
-2. **Produtividade**
-   - Limite o número de tarefas em progresso
-   - Atualize o status das tarefas regularmente
-   - Revise seu quadro diariamente
+```bash
+ng generate --help
+```
 
-3. **Personalização**
-   - Escolha cores que façam sentido para seu fluxo
-   - Crie tags que reflitam suas categorias de trabalho
-   - Ajuste os limites das colunas conforme sua capacidade
+## Building
 
-## 🔧 Solução de Problemas
+To build the project run:
 
-Se encontrar algum problema:
+```bash
+ng build
+```
 
-1. **Página não carrega**
-   - Verifique sua conexão com a internet
-   - Limpe o cache do navegador
-   - Tente fazer logout e login novamente
+This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
-2. **Cartões não aparecem**
-   - Recarregue a página
-   - Verifique se está logado corretamente
+## Running unit tests
 
-3. **Erros de salvamento**
-   - Aguarde alguns segundos e tente novamente
-   - Verifique sua conexão com a internet
+To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
 
-## 📱 Compatibilidade
+```bash
+ng test
+```
 
-A aplicação é compatível com:
-- Google Chrome (recomendado)
-- Firefox
-- Safari
-- Edge
-- Dispositivos móveis (layout responsivo)
+## Running end-to-end tests
 
-## 🔒 Privacidade e Segurança
+For end-to-end (e2e) testing, run:
 
-- Seus dados são armazenados com segurança
-- Autenticação via Google para proteção
-- Backups automáticos dos seus quadros
+```bash
+ng e2e
+```
 
-## 🤝 Suporte
+Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
 
-Encontrou algum problema ou tem sugestões?
-- Abra uma issue no GitHub
-- Entre em contato via email: [seu-email@exemplo.com]
+## Additional Resources
 
----
-
-Desenvolvido com ❤️ usando Angular e Firebase
+For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

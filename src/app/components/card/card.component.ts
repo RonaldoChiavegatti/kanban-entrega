@@ -31,19 +31,33 @@ export class CardComponent {
   }
 
   formatDate(date: string | Date | undefined): string {
-    if (!date) return '';
+    if (!date) return "";
     
     try {
-      const d = new Date(date);
-      if (isNaN(d.getTime())) return '';
+      console.log(`Formatando data no card: ${this.card.title}, valor original:`, date);
       
-      return d.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      // Converter para Date se for string
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Verificar se a data é válida
+      if (isNaN(dateObj.getTime())) {
+        console.error('Data inválida:', date);
+        return "";
+      }
+      
+      // Usar opções mais específicas de formatação
+      const options: Intl.DateTimeFormatOptions = { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      };
+      
+      const formatted = dateObj.toLocaleDateString(undefined, options);
+      console.log(`Data formatada: ${formatted}`);
+      return formatted;
     } catch (error) {
-      return '';
+      console.error('Erro ao formatar data:', error);
+      return "";
     }
   }
 
