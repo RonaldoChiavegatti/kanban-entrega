@@ -206,9 +206,18 @@ export class BoardService implements OnDestroy {
             return of(userBoards[0]);
           }
           
-          // Se não encontrar boards específicos do usuário, usar o primeiro
-          console.log('Board encontrado na API mas não pertence ao usuário atual. Usando primeiro board:', boards[0]);
-          return of(boards[0]);
+          // Se não encontrar boards específicos do usuário, criar um novo
+          console.log('Nenhum board encontrado para o usuário atual. Criando um novo...');
+          return this.boardGraphqlService.createBoard(this.mockBoard.title).pipe(
+            tap(newBoard => {
+              console.log('Novo board criado para o usuário:', newBoard.id);
+            }),
+            catchError(error => {
+              console.error('Erro ao criar board:', error);
+              this.toastService.show('Erro ao criar seu quadro. Algumas funcionalidades podem estar limitadas.', 'error');
+              return of(this.deepClone(this.mockBoard));
+            })
+          );
         } else if (!Array.isArray(boards) && boards.id) {
           // Se recebemos um único board (do createBoard)
           console.log('Board único recebido (provavelmente novo):', boards);
@@ -253,7 +262,10 @@ export class BoardService implements OnDestroy {
         // Atualizar o userId no board se estiver vazio ou diferente do usuário atual
         if (!board.userId || board.userId !== this.currentUserId) {
           console.log(`Board com userId ${board.userId || 'não definido'}. Atualizando para o usuário atual: ${this.currentUserId}`);
-          this.boardGraphqlService.updateBoard(board.id, { title: board.title }).pipe(
+          this.boardGraphqlService.updateBoard(board.id, { 
+            title: board.title,
+            userId: this.currentUserId 
+          }).pipe(
             catchError(error => {
               console.error('Erro ao atualizar userId do board:', error);
               return of(null);
