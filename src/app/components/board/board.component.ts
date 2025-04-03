@@ -48,6 +48,7 @@ export class BoardComponent implements OnInit, OnDestroy {
       if (this.currentUser?.uid !== user?.uid) {
         console.log('Usuário mudou, recarregando quadro...');
         this.currentUser = user;
+        this.isLoading = true;
         this.loadBoard();
       }
     });
@@ -63,7 +64,6 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   loadBoard(): void {
-    this.isLoading = true;
     console.log('BoardComponent: Iniciando carregamento do quadro');
     
     // Limpar completamente o board atual

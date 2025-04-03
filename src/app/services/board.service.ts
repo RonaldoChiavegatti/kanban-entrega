@@ -147,7 +147,6 @@ export class BoardService implements OnDestroy {
     // Se houve troca de usuário, é essencial garantir que o board anterior seja completamente limpo
     if (this.previousUserId) {
       console.log(`Troca de usuário detectada: ${this.previousUserId} -> ${this.currentUserId}`);
-      console.log('Limpando completamente o board anterior antes de carregar o novo');
       
       // Resetar completamente o board para eliminar quaisquer vestígios do usuário anterior
       const emptyBoard: Board = {
@@ -157,10 +156,11 @@ export class BoardService implements OnDestroy {
       };
       this.boardSubject.next(emptyBoard);
       
-      // Esperar um momento para garantir que a UI atualize antes de fazer a chamada à API
-      setTimeout(() => {
-        this.fetchBoardsFromAPI();
-      }, 100);
+      // Limpar toasts anteriores
+      this.toastService.clearAll();
+      
+      // Fazer a chamada à API imediatamente
+      this.fetchBoardsFromAPI();
     } else {
       // Inicializar com o mockBoard apenas para feedback visual quando não há troca de usuário
       console.log('Inicializando com mockBoard para feedback visual');
