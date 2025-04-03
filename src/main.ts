@@ -38,20 +38,14 @@ if (environment.production) {
 
 bootstrapApplication(AppComponent, {
   providers: [
-    provideAnimations(),
     provideHttpClient(withInterceptors([authInterceptor])),
-    provideRouter(routes, withHashLocation()),
-    // Firebase
-    importProvidersFrom(
-      provideFirebaseApp(() => firebaseApp),
-      provideAuth(() => getAuth()),
-      provideFirestore(() => getFirestore()),
-      provideStorage(() => getStorage())
-    ),
-    // GraphQL
+    provideAnimations(),
+    provideRouter(routes, withHashLocation()),  // Usar modo hash para URLs
     importProvidersFrom(GraphQLModule),
-    // Para permitir a injeção do Apollo
-    Apollo
-  ],
-}).catch((err) => console.error(err))
+    provideFirebaseApp(() => firebaseApp),
+    provideAuth(() => getAuth()),
+    provideFirestore(() => getFirestore()),
+    provideStorage(() => getStorage())
+  ]
+}).catch((err) => console.error(err));
 
