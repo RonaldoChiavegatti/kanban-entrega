@@ -7,17 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Adicionar script para preservar dados de sessão -->
-  <script>
-    // Preservar a URL original com os parâmetros de consulta
-    sessionStorage.setItem('redirectPath', window.location.pathname.replace('/kanban-entrega/', ''));
-    
-    // Verificar se estamos em uma rota do GitHub Pages (com /kanban-entrega/)
-    const path = window.location.pathname;
-    
-    // Redirecionar para a página principal da aplicação
-    window.location.replace('/kanban-entrega/');
-  </script>
+  <!-- Carrega as variáveis de ambiente em tempo de execução -->
+  <script src="assets/runtime-env.js"></script>
 </head>
 <body>
   <app-root></app-root>
