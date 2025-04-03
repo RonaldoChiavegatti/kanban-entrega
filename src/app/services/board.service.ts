@@ -1457,5 +1457,21 @@ export class BoardService implements OnDestroy {
       this.authSubscription.unsubscribe();
     }
   }
+
+  updateBoardTitle(boardId: string, boardTitle: string): void {
+    this.boardGraphqlService.updateBoard(boardId, { 
+      title: boardTitle,
+      userId: this.currentUserId 
+    }).subscribe({
+      next: (updatedBoard) => {
+        console.log('Board atualizado com sucesso:', updatedBoard);
+        this.updateBoardInState(updatedBoard);
+      },
+      error: (error) => {
+        console.error('Erro ao atualizar título do board:', error);
+        this.toastService.showError('Erro ao atualizar título do board');
+      }
+    });
+  }
 }
 

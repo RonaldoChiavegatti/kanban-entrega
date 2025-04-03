@@ -76,6 +76,11 @@ const GET_BOARD = gql`
   }
 `;
 
+interface BoardInput {
+  title: string;
+  userId: string;
+}
+
 const CREATE_BOARD = gql`
   mutation CreateBoard($input: BoardInput!) {
     createBoard(input: $input) {
@@ -553,23 +558,26 @@ export class BoardGraphqlService {
     );
   }
 
-  updateBoard(id: string, input: { title: string }): Observable<Board> {
+  updateBoard(id: string, input: BoardInput): Observable<Board> {
+    const token = this.authService.getToken();
     return this.apollo.mutate<{ updateBoard: Board }>({
       mutation: UPDATE_BOARD,
       variables: {
         id,
         input
       },
-      errorPolicy: 'all'
+      context: {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
+      }
     })
     .pipe(
       map(result => {
-        if (result.errors) {
-          console.error(`Erro ao atualizar board ${id}:`, result.errors);
-          throw new Error(`Erro ao atualizar board: ${result.errors[0].message}`);
+        if (!result.data?.updateBoard) {
+          throw new Error('Board não foi atualizado');
         }
-        console.log('Board atualizado:', result.data?.updateBoard);
-        return result.data!.updateBoard;
+        return result.data.updateBoard;
       }),
       catchError(this.handleError('updateBoard'))
     );
