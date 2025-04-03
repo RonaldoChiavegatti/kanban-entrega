@@ -7,6 +7,19 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
+  <script>
+    // Verificar se a URL contém /kanban-entrega/
+    const path = window.location.pathname;
+    if (path.includes('/kanban-entrega/')) {
+      // Se já tiver hash, não fazer nada
+      if (!window.location.hash) {
+        // Extrair a parte da URL após /kanban-entrega/
+        const route = path.split('/kanban-entrega/')[1];
+        // Redirecionar para a rota correta com hash
+        window.location.href = '/kanban-entrega/#/' + route;
+      }
+    }
+  </script>
   <app-root></app-root>
 </body>
 </html> 
