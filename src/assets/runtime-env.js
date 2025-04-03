@@ -1,5 +1,5 @@
 // Gerado automaticamente pelo build-env-config.js
 window.ENV = {
-  "production": true,
+  "production": false,
   "graphqlUrl": "https://kanban-deploy-fmfj.onrender.com/graphql"
 };

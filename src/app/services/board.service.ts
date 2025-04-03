@@ -200,16 +200,16 @@ export class BoardService implements OnDestroy {
             error.message?.includes('Unauthorized') || 
             error.networkError?.status === 401) {
           console.warn('Erro de autenticação. Verifique se o usuário está logado corretamente.');
-          this.toastService.show('Erro de autenticação. Faça login novamente.', 'error');
+          this.toastService.show('Sua sessão expirou. Por favor, faça login novamente.', 'error');
         } else {
-          this.toastService.show('Erro ao carregar dados do servidor. Criando um novo board.', 'warning');
+          this.toastService.show('Não foi possível carregar seus dados. Criando um novo quadro.', 'warning');
         }
         
         // Caso de erro, criamos um novo board a partir do modelo
         return this.boardGraphqlService.createBoard(this.mockBoard.title).pipe(
           catchError(createError => {
             console.error('Erro ao criar board:', createError);
-            this.toastService.show('Erro ao criar quadro no servidor.', 'error');
+            this.toastService.show('Erro ao criar quadro. Algumas funcionalidades podem estar limitadas.', 'error');
             return of(this.deepClone(this.mockBoard));
           })
         );
@@ -239,7 +239,7 @@ export class BoardService implements OnDestroy {
             }),
             catchError(error => {
               console.error('Erro ao criar board:', error);
-              this.toastService.show('Erro ao criar quadro no servidor.', 'error');
+              this.toastService.show('Erro ao criar quadro. Algumas funcionalidades podem estar limitadas.', 'error');
               return of(this.deepClone(this.mockBoard));
             })
           );
@@ -251,7 +251,7 @@ export class BoardService implements OnDestroy {
         
         if (!board || !board.columns) {
           console.error('Board recebido da API é inválido:', board);
-          this.toastService.show('Board recebido da API é inválido, usando board local.', 'warning');
+          this.toastService.show('Erro ao carregar o quadro. Usando versão local.', 'warning');
           this.updateBoardState(this.deepClone(this.mockBoard));
           return;
         }
@@ -262,8 +262,10 @@ export class BoardService implements OnDestroy {
         // Atualizar o board no estado local
         this.updateBoardState(board);
         
-        // Informar o usuário que os dados foram carregados com sucesso
-        this.toastService.show('Dados carregados com sucesso!', 'success');
+        // Informar o usuário que os dados foram carregados com sucesso apenas se houve troca de usuário
+        if (this.previousUserId) {
+          this.toastService.show('Seus dados foram carregados com sucesso!', 'success');
+        }
         
         // Atualizar o userId no board se estiver vazio ou diferente do usuário atual
         if (!board.userId || board.userId !== this.currentUserId) {
@@ -286,7 +288,7 @@ export class BoardService implements OnDestroy {
       },
       error: (error) => {
         console.error('Erro ao processar board:', error);
-        this.toastService.show('Erro ao processar dados do servidor. Usando board local.', 'error');
+        this.toastService.show('Erro ao carregar seus dados. Usando versão local.', 'error');
         // Em caso de erro, usar o board mockado
         this.updateBoardState(this.deepClone(this.mockBoard));
       }
@@ -408,13 +410,13 @@ export class BoardService implements OnDestroy {
     this.boardGraphqlService.addColumn(board.id, column).pipe(
       catchError(error => {
         console.error('Erro ao adicionar coluna:', error);
-        this.toastService.show('Erro ao adicionar coluna.', 'error');
+        this.toastService.show('Erro ao adicionar coluna. Tente novamente.', 'error');
         return of(null);
       })
     ).subscribe(updatedBoard => {
       if (updatedBoard) {
         this.updateBoardState(updatedBoard);
-        this.toastService.show('Coluna adicionada com sucesso!', 'success');
+        // Removido toast de sucesso para evitar spam
       }
     });
   }
@@ -732,15 +734,12 @@ export class BoardService implements OnDestroy {
     };
     this.updateBoardState(optimisticBoard);
     
-    // Exibir toast informativo
-    this.toastService.show('Arquivando coluna...', 'info');
-    
     // Enviar a requisição para o backend
     this.boardGraphqlService.deleteColumn(board.id, columnId).pipe(
       catchError(error => {
         // Em caso de erro, reverter a operação local
         console.error('Erro ao excluir coluna:', error);
-        this.toastService.show('Erro ao excluir coluna.', 'error');
+        this.toastService.show('Erro ao excluir coluna. Tente novamente.', 'error');
         
         // Restaurar o estado anterior
         optimisticBoard.columns.splice(columnIndex, 0, removedColumn);
@@ -750,8 +749,7 @@ export class BoardService implements OnDestroy {
       })
     ).subscribe(updatedBoard => {
       if (updatedBoard) {
-        // Já atualizamos o estado local, apenas confirmar com uma mensagem de sucesso
-        this.toastService.show('Coluna arquivada com sucesso!', 'success');
+        // Removido toast de sucesso para evitar spam
       }
     });
   }
@@ -836,13 +834,13 @@ export class BoardService implements OnDestroy {
     this.boardGraphqlService.addCard(board.id, columnId, newCard).pipe(
       catchError(error => {
         console.error('Erro ao adicionar card:', error);
-        this.toastService.show('Erro ao adicionar card.', 'error');
+        this.toastService.show('Erro ao adicionar card. Tente novamente.', 'error');
         return of(null);
       })
     ).subscribe(updatedBoard => {
       if (updatedBoard) {
         this.updateBoardState(updatedBoard);
-        this.toastService.show('Card adicionado com sucesso!', 'success');
+        // Removido toast de sucesso para evitar spam
       }
     });
   }
@@ -969,7 +967,7 @@ export class BoardService implements OnDestroy {
     this.boardGraphqlService.deleteCard(board.id, columnId, cardId).pipe(
       catchError(error => {
         console.error('Erro ao excluir card:', error);
-        this.toastService.show('Erro ao excluir card. Revertendo alterações.', 'error');
+        this.toastService.show('Erro ao excluir card. Tente novamente.', 'error');
         
         // Em caso de erro, reverter para o estado original
         this.updateBoardState(originalBoard);
@@ -1003,7 +1001,7 @@ export class BoardService implements OnDestroy {
         
         // Atualizar o estado com o board processado
         this.updateBoardState(processedBoard);
-        this.toastService.show('Card excluído com sucesso!', 'success');
+        // Removido toast de sucesso para evitar spam
       } else {
         // Se o servidor não retornar dados, buscar o board atualizado
         this.boardGraphqlService.getBoard(board.id).subscribe(freshBoard => {
