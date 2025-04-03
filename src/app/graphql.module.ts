@@ -31,7 +31,10 @@ export function createApollo(httpLink: HttpLink, authService: AuthService) {
       });
     }
     if (networkError) {
-      console.error(`[Network error]`);
+      console.error(`[Network error]:`, networkError);
+      if (networkError.statusCode) {
+        console.error(`Status code: ${networkError.statusCode}`);
+      }
     }
   });
 
@@ -125,6 +128,7 @@ export function createApollo(httpLink: HttpLink, authService: AuthService) {
         errorPolicy: 'all',
       },
       mutate: {
+        fetchPolicy: 'no-cache',
         errorPolicy: 'all',
       },
       watchQuery: {
@@ -137,6 +141,7 @@ export function createApollo(httpLink: HttpLink, authService: AuthService) {
 
 @NgModule({
   providers: [
+    Apollo,
     {
       provide: APOLLO_OPTIONS,
       useFactory: createApollo,

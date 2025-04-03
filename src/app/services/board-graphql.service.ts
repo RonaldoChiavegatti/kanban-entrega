@@ -388,7 +388,12 @@ export class BoardGraphqlService {
     return this.apollo.watchQuery<{ boards: Board[] }>({
       query: GET_BOARDS,
       fetchPolicy: 'network-only', // Importante: Forçar busca no servidor ignorando cache
-      errorPolicy: 'all'
+      errorPolicy: 'all',
+      context: {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
+      }
     })
     .valueChanges
     .pipe(
@@ -516,23 +521,43 @@ export class BoardGraphqlService {
   }
 
   createBoard(title: string): Observable<Board> {
+    const token = this.authService.getToken();
+    console.log('GraphQL: Criando board com token:', token ? 'Presente' : 'Ausente');
+
     return this.apollo.mutate<{ createBoard: Board }>({
       mutation: CREATE_BOARD,
       variables: {
         input: { title }
       },
+      context: {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : ''
+        }
+      },
       errorPolicy: 'all'
     })
     .pipe(
+      tap(result => {
+        if (result.errors) {
+          console.error('Erro ao criar board:', result.errors);
+        } else {
+          console.log('Board criado:', result.data?.createBoard);
+        }
+      }),
       map(result => {
         if (result.errors) {
           console.error('Erro ao criar board:', result.errors);
           throw new Error(`Erro ao criar board: ${result.errors[0].message}`);
         }
-        console.log('Board criado:', result.data?.createBoard);
-        return result.data!.createBoard;
+        if (!result.data?.createBoard) {
+          throw new Error('Resposta inválida ao criar board');
+        }
+        return result.data.createBoard;
       }),
-      catchError(this.handleError('createBoard'))
+      catchError(error => {
+        console.error('Erro ao criar board:', error);
+        return throwError(() => error);
+      })
     );
   }
 
