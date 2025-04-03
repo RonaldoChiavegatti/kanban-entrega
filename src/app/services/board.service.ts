@@ -1325,7 +1325,10 @@ export class BoardService implements OnDestroy {
         setTimeout(() => {
           console.log('CLEARDBOARDDATA: Tentando abordagem alternativa...');
           // Tentar a versão antiga que usava updateBoard
-          this.boardGraphqlService.updateBoard(boardId, { title: boardTitle }).subscribe({
+          this.boardGraphqlService.updateBoard(boardId, { 
+            title: boardTitle,
+            userId: this.currentUserId 
+          }).subscribe({
             next: (updatedBoard) => {
               console.log('CLEARDBOARDDATA: Atualização alternativa bem-sucedida:', updatedBoard);
               
@@ -1465,11 +1468,11 @@ export class BoardService implements OnDestroy {
     }).subscribe({
       next: (updatedBoard) => {
         console.log('Board atualizado com sucesso:', updatedBoard);
-        this.updateBoardInState(updatedBoard);
+        this.updateBoardState(updatedBoard);
       },
       error: (error) => {
         console.error('Erro ao atualizar título do board:', error);
-        this.toastService.showError('Erro ao atualizar título do board');
+        this.toastService.show('Erro ao atualizar título do board', { classname: 'bg-danger text-light' });
       }
     });
   }
