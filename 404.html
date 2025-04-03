@@ -8,7 +8,12 @@
 </head>
 <body>
   <script>
-    window.location.href = '/';
+    // Manter a rota atual e adicionar o hash se necessário
+    const currentPath = window.location.pathname;
+    const hash = window.location.hash;
+    if (!hash) {
+      window.location.href = '/#/' + currentPath.slice(1);
+    }
   </script>
 </body>
 </html> 
