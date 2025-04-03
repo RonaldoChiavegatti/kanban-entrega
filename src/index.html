@@ -9,6 +9,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Carrega as variáveis de ambiente em tempo de execução -->
   <script src="assets/runtime-env.js"></script>
+  <!-- Script para lidar com redirecionamentos do GitHub Pages -->
+  <script>
+    // Verificar se viemos do 404.html com um caminho para restaurar
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(function() {
+        const redirectPath = sessionStorage.getItem('redirectPath');
+        if (redirectPath) {
+          // Remover o item para não redirecionar novamente no futuro
+          sessionStorage.removeItem('redirectPath');
+          
+          // Redirecionar para o caminho original usando a API history
+          // Isso evita recarregar a página e perder o estado
+          if (window.location.pathname.endsWith('/kanban-entrega/') || 
+              window.location.pathname.endsWith('/kanban-entrega')) {
+            // Só redirecionar se estivermos na raiz da aplicação
+            if (redirectPath && redirectPath !== '/') {
+              console.log('Redirecionando para: ', redirectPath);
+              window.history.pushState({}, '', '/#/' + redirectPath);
+              // Despachar evento para o router do Angular
+              window.dispatchEvent(new Event('popstate'));
+            }
+          }
+        }
+      }, 100); // Pequeno atraso para garantir que o Angular tenha inicializado
+    });
+  </script>
 </head>
 <body>
   <app-root></app-root>
