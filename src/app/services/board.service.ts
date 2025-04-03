@@ -550,7 +550,7 @@ export class BoardService implements OnDestroy {
     ).subscribe({
       next: (updatedBoardFromApi) => {
         console.log('Coluna adicionada com sucesso via API');
-        this.updateBoardState(updatedBoardFromApi);
+        this.updateBoardState(updatedBoardFromApi as Board);
       },
       error: (error) => {
         console.error('Erro fatal ao adicionar coluna:', error);
